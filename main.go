@@ -14,11 +14,14 @@ func main() {
 		return
 	}
 
-	apiURL, err := params.ToApiURL()
+	client := vinted.NewClient("https://www.vinted.co.uk/api/v2")
+	items, err := client.GetItems(params)
 	if err != nil {
-		fmt.Println("Error generating API URL:", err)
+		fmt.Println("Error fetching items:", err)
 		return
 	}
 
-	fmt.Println("Generated API URL:", apiURL)
+	for _, item := range items {
+		fmt.Printf("Item ID: %d, Title: %s, Price: %s\n", item.ID, item.Title, item.Price.Amount)
+	}
 }

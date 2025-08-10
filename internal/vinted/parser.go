@@ -22,7 +22,6 @@ type SearchParams struct {
 	PriceFrom   float64
 	PriceTo     float64
 	Currency    string
-	Order       string
 }
 
 func ParseVintedURL(u string) (*SearchParams, error) {
@@ -41,10 +40,6 @@ func ParseVintedURL(u string) (*SearchParams, error) {
 
 	if currency := parsedURL.Query().Get("currency"); currency != "" {
 		params.Currency = currency
-	}
-
-	if order := parsedURL.Query().Get("order"); order != "" {
-		params.Order = order
 	}
 
 	if timeStr := parsedURL.Query().Get("time"); timeStr != "" {
@@ -141,10 +136,6 @@ func (s *SearchParams) ToApiURL() (string, error) {
 		values.Set("currency", s.Currency)
 	}
 
-	if s.Order != "" {
-		values.Set("order", s.Order)
-	}
-
 	if s.Time != 0 {
 		values.Set("time", fmt.Sprintf("%d", s.Time))
 	}
@@ -186,6 +177,8 @@ func (s *SearchParams) ToApiURL() (string, error) {
 			values.Add("patterns_ids[]", fmt.Sprintf("%d", id))
 		}
 	}
+
+	values.Add("order", "newest_first")
 
 	return fmt.Sprintf("%s?%s", baseURL, values.Encode()), nil
 }

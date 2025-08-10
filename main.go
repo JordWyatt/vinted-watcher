@@ -22,6 +22,6 @@ func main() {
 	}
 
 	for _, item := range items {
-		fmt.Printf("Item ID: %d, Title: %s, Price: %s\n", item.ID, item.Title, item.Price.Amount)
+		fmt.Printf("Item ID: %d, Title: %s, Price: %s, URL: %s\n", item.ID, item.Title, item.Price.Amount, item.URL)
 	}
 }

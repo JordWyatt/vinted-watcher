@@ -5,6 +5,7 @@ import (
 	"vinted-watcher/internal/vinted"
 )
 
+// Test code - will eventually become server entrypoint
 func main() {
 	url := "https://www.vinted.co.uk/catalog?search_text=universal%20works&time=1754856542&material_ids[]=149&material_ids[]=122&page=1"
 

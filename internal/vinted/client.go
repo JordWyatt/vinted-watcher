@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/cookiejar"
+	"vinted-watcher/internal/domain"
 )
 
 const vintedAuthURL = "https://www.vinted.co.uk"
@@ -180,7 +181,7 @@ func (c *Client) InitSession() error {
 	return nil
 }
 
-func (c *Client) GetItems(params *SearchParams) ([]Item, error) {
+func (c *Client) GetItems(params *domain.SearchParams) ([]Item, error) {
 	if err := c.InitSession(); err != nil {
 		return nil, err
 	}

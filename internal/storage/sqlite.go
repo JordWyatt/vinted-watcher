@@ -47,14 +47,18 @@ func (db *DB) createTables() error {
         search_params TEXT NOT NULL,
         last_checked DATETIME,
         active BOOLEAN DEFAULT 1,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );`
 
 	createSeenItemsTable := `
     CREATE TABLE IF NOT EXISTS seen_items (
         search_id INTEGER NOT NULL,
         item_id INTEGER NOT NULL,
+		item_url TEXT NOT NULL,
         seen_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         PRIMARY KEY (search_id, item_id),
         FOREIGN KEY (search_id) REFERENCES saved_searches(id) ON DELETE CASCADE
     );`

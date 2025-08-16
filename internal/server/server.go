@@ -6,16 +6,13 @@ import (
 	"vinted-watcher/internal/storage"
 )
 
-// POST /api/searches    # Add search from URL
-// GET  /api/searches    # List all searches
-// DELETE /api/searches/:id
-// GET  /api/health
 type Server interface {
 	Start() error
-	CreateAlertHandler(w http.ResponseWriter, r *http.Request)
-	ListAlertsHandler(w http.ResponseWriter, r *http.Request)
+	CreateSearchHandler(w http.ResponseWriter, r *http.Request)
+	ListSearchesHandler(w http.ResponseWriter, r *http.Request)
 }
 
+// TODO: Unit Test
 type HTTPServer struct {
 	Storage *storage.DB
 }

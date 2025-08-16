@@ -5,6 +5,7 @@ import (
 	"net/http"
 )
 
+// TODO: Unit Test
 func (s *HTTPServer) ListSearchesHandler(w http.ResponseWriter, r *http.Request) {
 	searches, err := s.Storage.GetAllSearches()
 	if err != nil {

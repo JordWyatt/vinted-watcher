@@ -15,6 +15,7 @@ type CreateAlertResponse struct {
 	ID int `json:"id"`
 }
 
+// TODO: Unit Test
 func (s *HTTPServer) CreateSearchHandler(w http.ResponseWriter, r *http.Request) {
 	var req CreateAlertRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {

@@ -11,10 +11,7 @@ import (
 
 func Test_CreateAndGetSearch(t *testing.T) {
 	// Initialize the database
-	db, err := NewDB(":memory:")
-	if err != nil {
-		t.Fatalf("Failed to initialize database: %v", err)
-	}
+	db := setupTestDB(t)
 	defer db.Close()
 
 	// Create a sample search
@@ -48,4 +45,81 @@ func Test_CreateAndGetSearch(t *testing.T) {
 	assert.Equal(t, savedSearch.Active, search.Active)
 	assert.WithinRange(t, search.CreatedAt, before, after)
 	assert.WithinRange(t, search.UpdatedAt, before, after)
+}
+
+func Test_GetAllSearches(t *testing.T) {
+	// Initialize the database
+	db := setupTestDB(t)
+	defer db.Close()
+
+	expectedSearches := []*domain.SavedSearch{
+		{
+			ID:   1,
+			Name: "test search",
+			SearchParams: &domain.SearchParams{
+				SearchText: "test search",
+				Time:       1754856542,
+			},
+			Active: true,
+		},
+		{
+			ID:   2,
+			Name: "another test search",
+			SearchParams: &domain.SearchParams{
+				SearchText: "another test search",
+				Time:       1754856543,
+			},
+			Active: true,
+		},
+	}
+
+	for _, search := range expectedSearches {
+		_, err := db.CreateSearch(search)
+		require.NoError(t, err)
+	}
+
+	actualSearches, err := db.GetAllSearches()
+	require.NoError(t, err)
+
+	assert.Len(t, actualSearches, 2)
+	assert.Equal(t, expectedSearches[0].ID, actualSearches[0].ID)
+	assert.Equal(t, expectedSearches[1].ID, actualSearches[1].ID)
+}
+
+func setupTestDB(t *testing.T) *DB {
+	t.Helper()
+
+	db, err := NewDB(":memory:")
+	if err != nil {
+		t.Fatalf("Failed to initialize test database: %v", err)
+	}
+	return db
+}
+
+func Test_MarkItemAsSeenAndIsItemSeen(t *testing.T) {
+	// Initialize the database
+	db := setupTestDB(t)
+	defer db.Close()
+
+	searchParams := &domain.SearchParams{
+		SearchText: "test search",
+		Time:       1754856542,
+	}
+	savedSearch := domain.NewSavedSearch(searchParams)
+
+	searchID, err := db.CreateSearch(savedSearch)
+	require.NoError(t, err)
+
+	itemID := 12345
+	err = db.MarkItemAsSeen(searchID, itemID)
+	require.NoError(t, err)
+
+	isSeen, err := db.IsItemSeen(searchID, itemID)
+	require.NoError(t, err)
+	assert.True(t, isSeen)
+
+	// Check for a different item ID to ensure it's not seen
+	isSeen, err = db.IsItemSeen(searchID, 1234)
+	require.NoError(t, err)
+	assert.False(t, isSeen)
 }

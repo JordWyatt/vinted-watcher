@@ -83,6 +83,62 @@ func (d *DB) GetSearchByID(id int) (*domain.SavedSearch, error) {
 	return &search, nil
 }
 
+func (d *DB) GetAllSearches() ([]*domain.SavedSearch, error) {
+	rows, err := d.conn.Query(`
+        SELECT *
+        FROM saved_searches`)
+	if err != nil {
+		return nil, fmt.Errorf("failed to execute select query: %w", err)
+	}
+	defer rows.Close()
+
+	var searches []*domain.SavedSearch
+	for rows.Next() {
+		var search domain.SavedSearch
+		var searchParamsJSON string
+
+		if err := rows.Scan(&search.ID, &search.Name, &searchParamsJSON, &search.LastChecked, &search.Active, &search.CreatedAt, &search.UpdatedAt); err != nil {
+			return nil, fmt.Errorf("failed to scan row: %w", err)
+		}
+
+		if err := json.Unmarshal([]byte(searchParamsJSON), &search.SearchParams); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal search params: %w", err)
+		}
+
+		searches = append(searches, &search)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("failed to iterate rows: %w", err)
+	}
+
+	return searches, nil
+}
+
+func (d *DB) IsItemSeen(searchID int, itemID int) (bool, error) {
+	var seen bool
+	err := d.conn.QueryRow(`
+        SELECT EXISTS(
+            SELECT 1
+            FROM seen_items
+            WHERE search_id = ? AND item_id = ?
+        )`, searchID, itemID).Scan(&seen)
+
+	if err != nil {
+		return false, fmt.Errorf("failed to execute select query: %w", err)
+	}
+
+	return seen, nil
+}
+
+func (d *DB) MarkItemAsSeen(searchID int, itemID int) error {
+	_, err := d.conn.Exec(`
+        INSERT INTO seen_items (search_id, item_id)
+        VALUES (?, ?)`, searchID, itemID)
+
+	return err
+}
+
 func (d *DB) Close() error {
 	if d.conn != nil {
 		return d.conn.Close()
@@ -106,10 +162,7 @@ func (db *DB) createTables() error {
     CREATE TABLE IF NOT EXISTS seen_items (
         search_id INTEGER NOT NULL,
         item_id INTEGER NOT NULL,
-		item_url TEXT NOT NULL,
         seen_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         PRIMARY KEY (search_id, item_id),
         FOREIGN KEY (search_id) REFERENCES saved_searches(id) ON DELETE CASCADE
     );`

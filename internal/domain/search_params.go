@@ -88,3 +88,5 @@ func (s *SearchParams) ToApiURL() (string, error) {
 
 	return fmt.Sprintf("%s?%s", baseURL, values.Encode()), nil
 }
+
+// TODO: Add ToWebURL method

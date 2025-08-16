@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"vinted-watcher/internal/domain"
 	"vinted-watcher/internal/storage"
 	"vinted-watcher/internal/vinted"
 )
@@ -23,14 +24,11 @@ func main() {
 		return
 	}
 
-	client := vinted.NewClient("https://www.vinted.co.uk/api/v2")
-	items, err := client.GetItems(params)
-	if err != nil {
-		fmt.Println("Error fetching items:", err)
+	savedSearch := domain.NewSavedSearch(params)
+
+	if err := db.CreateSearch(savedSearch); err != nil {
+		fmt.Println("Error saving search:", err)
 		return
 	}
 
-	for _, item := range items {
-		fmt.Printf("Item ID: %d, Title: %s, Price: %s, URL: %s\n", item.ID, item.Title, item.Price.Amount, item.URL)
-	}
 }

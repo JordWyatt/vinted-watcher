@@ -2,10 +2,15 @@ package storage
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
+	"time"
+	"vinted-watcher/internal/domain"
 
 	_ "github.com/mattn/go-sqlite3"
 )
+
+var now = time.Now()
 
 type DB struct {
 	conn *sql.DB
@@ -31,6 +36,53 @@ func NewDB(dbPath string) (*DB, error) {
 	return db, nil
 }
 
+func (d *DB) CreateSearch(search *domain.SavedSearch) (int, error) {
+
+	searchParamsJSON, err := json.Marshal(*search.SearchParams)
+	if err != nil {
+		return 0, fmt.Errorf("failed to marshal search params: %w", err)
+	}
+
+	result, err := d.conn.Exec(`
+        INSERT INTO saved_searches (name, search_params, last_checked, active, created_at, updated_at)
+        VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
+		search.Name, searchParamsJSON, search.LastChecked, search.Active)
+
+	if err != nil {
+		return 0, fmt.Errorf("failed to execute insert query: %w", err)
+	}
+
+	searchID, err := result.LastInsertId()
+	if err != nil {
+		return 0, fmt.Errorf("failed to get last insert ID: %w", err)
+	}
+
+	return int(searchID), nil
+}
+
+func (d *DB) GetSearchByID(id int) (*domain.SavedSearch, error) {
+	var search domain.SavedSearch
+	var searchParamsJSON string
+
+	err := d.conn.QueryRow(`
+        SELECT *
+        FROM saved_searches
+        WHERE id = ?`, id).Scan(&search.ID, &search.Name, &searchParamsJSON, &search.LastChecked, &search.Active, &search.CreatedAt, &search.UpdatedAt)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("failed to execute select query: %w", err)
+	}
+
+	if err := json.Unmarshal([]byte(searchParamsJSON), &search.SearchParams); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal search params: %w", err)
+	}
+
+	return &search, nil
+}
+
 func (d *DB) Close() error {
 	if d.conn != nil {
 		return d.conn.Close()
@@ -43,7 +95,6 @@ func (db *DB) createTables() error {
     CREATE TABLE IF NOT EXISTS saved_searches (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT NOT NULL,
-        original_url TEXT NOT NULL,
         search_params TEXT NOT NULL,
         last_checked DATETIME,
         active BOOLEAN DEFAULT 1,

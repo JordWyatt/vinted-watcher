@@ -12,3 +12,11 @@ type SavedSearch struct {
 	CreatedAt    time.Time
 	UpdatedAt    time.Time
 }
+
+func NewSavedSearch(searchParams *SearchParams) *SavedSearch {
+	return &SavedSearch{
+		Name:         searchParams.SearchText,
+		SearchParams: searchParams,
+		Active:       true,
+	}
+}

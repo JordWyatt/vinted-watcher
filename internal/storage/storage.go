@@ -7,10 +7,10 @@ import (
 type SearchStorage interface {
 	// Search CRUD operations
 	CreateSearch(search *domain.SavedSearch) error
-	GetAllSearches() ([]domain.SavedSearch, error)
 	GetSearchByID(id int) (*domain.SavedSearch, error)
-	UpdateSearch(search *domain.SavedSearch) error
-	DeleteSearch(id int) error
+	// GetAllSearches() ([]domain.SavedSearch, error)
+	// UpdateSearch(search *domain.SavedSearch) error
+	// DeleteSearch(id int) error
 
 	// Search status management
 	// UpdateLastChecked(searchID int) error

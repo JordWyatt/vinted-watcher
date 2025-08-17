@@ -10,8 +10,8 @@ import (
 
 func Test_ToApiURL_WithCompleteSearchTerms(t *testing.T) {
 	params := &SearchParams{
-		SearchText:  "universal works men",
-		Time:        1754854403,
+		SearchText: "universal works men",
+
 		CatalogIDs:  []int{2051, 2052},
 		Page:        1,
 		SizeIDs:     []int{209, 210},
@@ -35,7 +35,6 @@ func Test_ToApiURL_WithCompleteSearchTerms(t *testing.T) {
 func Test_ToApiURL_WithMinimalSearchTerms(t *testing.T) {
 	params := &SearchParams{
 		SearchText: "universal works",
-		Time:       1754855320,
 	}
 
 	expectedURL := "https://www.vinted.co.uk/api/v2/catalog/items?order=newest_first&search_text=universal+works&time=1754855320"

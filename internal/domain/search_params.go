@@ -11,7 +11,6 @@ type SearchParams struct {
 	SearchText string
 
 	// Optional parameters
-	Time        int64
 	CatalogIDs  []int
 	Page        int
 	SizeIDs     []int
@@ -40,10 +39,6 @@ func (s *SearchParams) ToApiURL() (string, error) {
 
 	if s.Currency != "" {
 		values.Set("currency", s.Currency)
-	}
-
-	if s.Time != 0 {
-		values.Set("time", fmt.Sprintf("%d", s.Time))
 	}
 
 	if s.Page != 0 {

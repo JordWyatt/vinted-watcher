@@ -17,7 +17,6 @@ func Test_CreateAndGetSearch(t *testing.T) {
 	// Create a sample search
 	searchParams := &domain.SearchParams{
 		SearchText: "test search",
-		Time:       1754856542,
 	}
 	savedSearch := domain.NewSavedSearch(searchParams)
 
@@ -58,7 +57,6 @@ func Test_GetAllSearches(t *testing.T) {
 			Name: "test search",
 			SearchParams: &domain.SearchParams{
 				SearchText: "test search",
-				Time:       1754856542,
 			},
 			Active: true,
 		},
@@ -67,7 +65,6 @@ func Test_GetAllSearches(t *testing.T) {
 			Name: "another test search",
 			SearchParams: &domain.SearchParams{
 				SearchText: "another test search",
-				Time:       1754856543,
 			},
 			Active: true,
 		},
@@ -103,7 +100,6 @@ func Test_MarkItemAsSeenAndIsItemSeen(t *testing.T) {
 
 	searchParams := &domain.SearchParams{
 		SearchText: "test search",
-		Time:       1754856542,
 	}
 	savedSearch := domain.NewSavedSearch(searchParams)
 

@@ -12,7 +12,6 @@ func Test_Parse_WithFullVintedURL(t *testing.T) {
 
 	expected := &domain.SearchParams{
 		SearchText:  "universal works men",
-		Time:        1754854403,
 		CatalogIDs:  []int{2051, 2052},
 		Page:        1,
 		SizeIDs:     []int{209, 210},
@@ -35,7 +34,6 @@ func Test_Parse_MinimalURL(t *testing.T) {
 
 	expected := &domain.SearchParams{
 		SearchText: "universal works",
-		Time:       1754855320,
 	}
 
 	actual, err := ParseVintedURL(url)

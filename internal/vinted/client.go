@@ -10,6 +10,10 @@ import (
 
 const vintedAuthURL = "https://www.vinted.co.uk"
 
+type VintedClient interface {
+	GetItems(params *domain.SearchParams) ([]Item, error)
+}
+
 type Client struct {
 	baseURL    string
 	httpClient *http.Client

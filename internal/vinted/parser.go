@@ -17,20 +17,10 @@ func ParseVintedURL(u string) (*domain.SearchParams, error) {
 
 	if searchText := parsedURL.Query().Get("search_text"); searchText != "" {
 		params.SearchText = searchText
-	} else {
-		return nil, fmt.Errorf("missing required parameter: search_text")
 	}
 
 	if currency := parsedURL.Query().Get("currency"); currency != "" {
 		params.Currency = currency
-	}
-
-	if timeStr := parsedURL.Query().Get("time"); timeStr != "" {
-		time, err := strconv.Atoi(timeStr)
-		if err != nil {
-			return nil, fmt.Errorf("failed to parse time: %w", err)
-		}
-		params.Time = int64(time)
 	}
 
 	if catalogIDsString := parsedURL.Query()["catalog[]"]; len(catalogIDsString) > 0 {
@@ -95,6 +85,14 @@ func ParseVintedURL(u string) (*domain.SearchParams, error) {
 			return nil, fmt.Errorf("failed to parse price_to: %w", err)
 		}
 		params.PriceTo = priceTo
+	}
+
+	if params.SearchText == "" {
+		return nil, fmt.Errorf("missing required parameter: search_text")
+	}
+
+	if len(params.BrandIDs) == 0 {
+		return nil, fmt.Errorf("missing required parameter: brand_ids (required due to bug in Vinted newest_first ordering)")
 	}
 
 	return params, nil

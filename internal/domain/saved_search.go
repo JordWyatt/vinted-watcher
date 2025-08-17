@@ -20,3 +20,7 @@ func NewSavedSearch(searchParams *SearchParams) *SavedSearch {
 		Active:       true,
 	}
 }
+
+func (s *SavedSearch) IsActive() bool {
+	return s.Active
+}

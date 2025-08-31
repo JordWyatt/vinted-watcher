@@ -1,22 +1,31 @@
 package scraper
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"time"
+	"vinted-watcher/internal/discord"
 	"vinted-watcher/internal/domain"
 	"vinted-watcher/internal/storage"
 	"vinted-watcher/internal/vinted"
 )
 
+const (
+	maxEmbedsPerMessage = 10 // Discord limit
+	notificationTimeout = 10 * time.Second
+)
+
 type ScraperConfig struct {
-	LookbackPeriod time.Duration
+	LookbackPeriod                time.Duration
+	DiscordNotificationWebhookURL string
 }
 
 type Scraper struct {
 	vintedClient vinted.VintedClient
 	db           storage.SearchStorage
 	config       ScraperConfig
+	discord      *discord.DiscordWebhook
 }
 
 type ScraperResult struct {
@@ -26,11 +35,17 @@ type ScraperResult struct {
 }
 
 func NewScraper(vintedClient vinted.VintedClient, db storage.SearchStorage, config ScraperConfig) *Scraper {
-	return &Scraper{
+	s := &Scraper{
 		vintedClient: vintedClient,
 		db:           db,
 		config:       config,
 	}
+
+	if config.DiscordNotificationWebhookURL != "" {
+		s.discord = discord.NewDiscordWebhook(config.DiscordNotificationWebhookURL)
+	}
+
+	return s
 }
 
 func (s *Scraper) Scrape() (*ScraperResult, error) {
@@ -107,6 +122,14 @@ func (s *Scraper) processSearch(search domain.SavedSearch) ([]vinted.Item, error
 		slog.Debug("Processed item", "item_id", item.ID, "search_id", search.ID)
 	}
 
+	if s.discord != nil && len(newItems) > 0 {
+		slog.Info("posting discord notification for search", "search_id", search.ID)
+		err := s.postDiscordNotification(newItems, search)
+		if err != nil {
+			return nil, fmt.Errorf("failed to post discord notification: %w", err)
+		}
+	}
+
 	return newItems, nil
 }
 
@@ -156,7 +179,141 @@ func (s *Scraper) filterItemsByLookback(items []vinted.Item) []vinted.Item {
 
 // isItemWithinLookback checks if an item is within the lookback period
 func (s *Scraper) isItemWithinLookback(item vinted.Item, cutoff time.Time) bool {
-	slog.Debug("Checking whether item was uploaded within lookback period", "item_id", item.ID, "uploaded_at", item.Photo.HighResolution.Timestamp, "cutoff_time", cutoff)
 	uploadedAt := time.Unix(int64(item.Photo.HighResolution.Timestamp), 0)
+	slog.Debug("Checking whether item was uploaded within lookback period", "item_name", item.Title, "item_id", item.ID, "uploaded_at", uploadedAt, "cutoff_time", cutoff)
 	return uploadedAt.After(cutoff)
+}
+
+func (s *Scraper) postDiscordNotification(items []vinted.Item, search domain.SavedSearch) error {
+	if len(items) == 0 {
+		return nil // No items to notify about
+	}
+
+	// Split items into batches if needed (Discord has a limit of 10 embeds per message)
+	batches := s.createItemBatches(items, maxEmbedsPerMessage)
+
+	ctx, cancel := context.WithTimeout(context.Background(), notificationTimeout)
+	defer cancel()
+
+	for i, batch := range batches {
+		if err := s.sendBatch(ctx, batch, search, i, len(batches)); err != nil {
+			return fmt.Errorf("failed to send batch %d: %w", i+1, err)
+		}
+	}
+
+	return nil
+}
+
+func (s *Scraper) createItemBatches(items []vinted.Item, batchSize int) [][]vinted.Item {
+	var batches [][]vinted.Item
+
+	for i := 0; i < len(items); i += batchSize {
+		end := i + batchSize
+		if end > len(items) {
+			end = len(items)
+		}
+		batches = append(batches, items[i:end])
+	}
+
+	return batches
+}
+
+func (s *Scraper) sendBatch(ctx context.Context, items []vinted.Item, search domain.SavedSearch, batchNum, totalBatches int) error {
+	message := s.createDiscordMessage(items, search, batchNum, totalBatches)
+
+	if err := s.discord.PostMessage(ctx, message); err != nil {
+		return fmt.Errorf("discord API error: %w", err)
+	}
+
+	return nil
+}
+
+func (s *Scraper) createDiscordMessage(items []vinted.Item, search domain.SavedSearch, batchNum, totalBatches int) discord.WebhookMessage {
+	content := s.formatMessageContent(search, len(items), batchNum, totalBatches)
+
+	message := discord.WebhookMessage{
+		Content: content,
+		Embeds:  make([]discord.Embed, 0, len(items)),
+	}
+
+	for _, item := range items {
+		embed := s.createItemEmbed(item)
+		message.Embeds = append(message.Embeds, embed)
+	}
+
+	return message
+}
+
+func (s *Scraper) formatMessageContent(search domain.SavedSearch, itemCount, batchNum, totalBatches int) string {
+	if totalBatches == 1 {
+		return fmt.Sprintf("🔍 **%s**: %d new item(s) found", search.Name, itemCount)
+	}
+
+	return fmt.Sprintf("🔍 **%s**: Batch %d/%d", search.Name, batchNum+1, totalBatches)
+}
+
+func (s *Scraper) createItemEmbed(item vinted.Item) discord.Embed {
+	embed := discord.Embed{
+		Title: s.truncateTitle(item.Title, 256), // Discord title limit
+		URL:   item.URL,
+		Fields: []discord.EmbedField{
+			{
+				Name:   "💰 Price",
+				Value:  s.formatPrice(item.Price),
+				Inline: true,
+			},
+		},
+	}
+
+	// Add size field if available
+	if item.SizeTitle != "" {
+		embed.Fields = append(embed.Fields, discord.EmbedField{
+			Name:   "📏 Size",
+			Value:  item.SizeTitle,
+			Inline: true,
+		})
+	}
+
+	// Add brand field if available
+	if item.BrandTitle != "" {
+		embed.Fields = append(embed.Fields, discord.EmbedField{
+			Name:   "🏷️ Brand",
+			Value:  item.BrandTitle,
+			Inline: true,
+		})
+	}
+
+	// Add image if available
+	if item.Photo.URL != "" {
+		embed.Image = discord.EmbedImage{
+			URL: item.Photo.URL,
+		}
+	}
+
+	return embed
+}
+
+func (s *Scraper) formatPrice(price vinted.Price) string {
+	if price.Amount == "" || price.CurrencyCode == "" {
+		return "Price not available"
+	}
+
+	// Handle different currency formats
+	switch price.CurrencyCode {
+	case "EUR":
+		return fmt.Sprintf("€%s", price.Amount)
+	case "USD":
+		return fmt.Sprintf("$%s", price.Amount)
+	case "GBP":
+		return fmt.Sprintf("£%s", price.Amount)
+	default:
+		return fmt.Sprintf("%s %s", price.Amount, price.CurrencyCode)
+	}
+}
+
+func (s *Scraper) truncateTitle(title string, maxLength int) string {
+	if len(title) <= maxLength {
+		return title
+	}
+	return title[:maxLength-3] + "..."
 }

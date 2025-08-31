@@ -3,6 +3,7 @@ package vinted
 import (
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"net/http/cookiejar"
 	"vinted-watcher/internal/domain"
@@ -200,6 +201,7 @@ func (c *Client) GetItems(params *domain.SearchParams) ([]Item, error) {
 		return nil, fmt.Errorf("failed to create API request: %w", err)
 	}
 
+	slog.Info("Making Vinted API request", "vinted_api_url", req.URL.String())
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to make API request: %w", err)

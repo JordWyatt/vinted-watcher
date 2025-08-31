@@ -14,6 +14,9 @@ import (
 	"vinted-watcher/internal/vinted"
 )
 
+const DISCORD_WEBHOOK_URL_ENV_VAR = "DISCORD_WEBHOOK_URL"
+const VINTED_BASE_URL = "http://www.vinted.com"
+
 // Test code - will eventually become server entrypoint
 func main() {
 	ctx, cancel := context.WithCancel(context.Background())
@@ -34,13 +37,14 @@ func main() {
 		return
 	}
 
-	vintedClient := vinted.NewClient("https://www.vinted.com")
+	vintedClient := vinted.NewClient(VINTED_BASE_URL)
 
 	vintedScraper := scraper.NewScraper(vintedClient, db, scraper.ScraperConfig{
-		LookbackPeriod: 24 * time.Hour,
+		LookbackPeriod:                24 * time.Hour * 7,
+		DiscordNotificationWebhookURL: os.Getenv(DISCORD_WEBHOOK_URL_ENV_VAR),
 	})
 
-	go startScheduler(ctx, vintedScraper, 1*time.Minute)
+	go startScheduler(ctx, vintedScraper, 10*time.Second)
 
 	httpServer := server.NewServer(db)
 	if err := httpServer.Start(ctx); err != nil {

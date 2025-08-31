@@ -81,7 +81,10 @@ func (s *SearchParams) ToApiURL() (string, error) {
 
 	values.Add("order", "newest_first")
 
-	return fmt.Sprintf("%s?%s", baseURL, values.Encode()), nil
+	encoded := fmt.Sprintf("%s?%s", baseURL, values.Encode())
+	// hacky - but the vinted API returns different results if you use the encoded form (often less)
+	encoded = strings.ReplaceAll(encoded, "%2B", "+")
+	return encoded, nil
 }
 
 // TODO: Add ToWebURL method

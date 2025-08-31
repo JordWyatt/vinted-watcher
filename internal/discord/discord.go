@@ -18,7 +18,25 @@ type DiscordWebhook struct {
 
 // WebhookMessage represents a Discord webhook message payload
 type WebhookMessage struct {
-	Content string `json:"content,omitempty"`
+	Content string  `json:"content,omitempty"`
+	Embeds  []Embed `json:"embeds,omitempty"`
+}
+
+type Embed struct {
+	Title  string       `json:"title,omitempty"`
+	Fields []EmbedField `json:"fields,omitempty"`
+	Image  EmbedImage   `json:"image,omitempty"`
+	URL    string       `json:"url,omitempty"`
+}
+
+type EmbedField struct {
+	Name   string `json:"name"`
+	Value  string `json:"value"`
+	Inline bool   `json:"inline"`
+}
+
+type EmbedImage struct {
+	URL string `json:"url"`
 }
 
 // NewDiscordWebhook creates a new Discord webhook client with sensible defaults
@@ -39,12 +57,7 @@ func NewDiscordWebhookWithClient(webhookURL string, client *http.Client) *Discor
 	}
 }
 
-func (d DiscordWebhook) PostMessage(ctx context.Context, msg string) error {
-
-	message := &WebhookMessage{
-		Content: msg,
-	}
-
+func (d DiscordWebhook) PostMessage(ctx context.Context, message WebhookMessage) error {
 	if message.Content == "" {
 		return fmt.Errorf("message content cannot be empty")
 	}
@@ -62,7 +75,7 @@ func (d DiscordWebhook) PostMessage(ctx context.Context, msg string) error {
 	}
 
 	req.Header.Set("Content-Type", "application/json")
-	
+
 	resp, err := d.client.Do(req)
 	if err != nil {
 		slog.Error("error posting to discord", "error", err)

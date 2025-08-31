@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"net/http"
 	"time"
@@ -41,10 +42,12 @@ func (s *HTTPServer) Start(ctx context.Context) error {
 
 	errChan := make(chan error)
 	go func() {
-		if err := s.httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		if err := s.httpServer.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			errChan <- err
 		}
 	}()
+
+	slog.Info("Server listening on :8080")
 
 	select {
 	case err := <-errChan:

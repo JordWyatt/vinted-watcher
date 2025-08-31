@@ -36,14 +36,14 @@ func main() {
 
 	vintedClient := vinted.NewClient("https://www.vinted.com")
 
-	scraper := scraper.NewScraper(vintedClient, db, scraper.ScraperConfig{
+	vintedScraper := scraper.NewScraper(vintedClient, db, scraper.ScraperConfig{
 		LookbackPeriod: 24 * time.Hour,
 	})
 
-	go startScheduler(ctx, scraper, 1*time.Minute)
+	go startScheduler(ctx, vintedScraper, 1*time.Minute)
 
-	server := server.NewServer(db)
-	if err := server.Start(ctx); err != nil {
+	httpServer := server.NewServer(db)
+	if err := httpServer.Start(ctx); err != nil {
 		slog.Error("Error starting server:", "error", err)
 	}
 }
@@ -55,10 +55,9 @@ func startScheduler(ctx context.Context, scraper *scraper.Scraper, interval time
 	for {
 		select {
 		case <-ticker.C:
-			slog.Debug("Starting scheduled scrape...")
 			safeScrape(scraper)
 		case <-ctx.Done():
-			slog.Debug("Stopping scheduled scrape...")
+			slog.Info("Stopping scheduled scrape...")
 			return
 		}
 	}
@@ -75,5 +74,5 @@ func safeScrape(scraper *scraper.Scraper) {
 		slog.Error("Error scraping:", "error", err)
 		return
 	}
-	slog.Debug("Scrape result:", "result", scraperResult)
+	slog.Debug("Scrape stats", "new_item_count", len(scraperResult.NewItems), "processed_searches_count", scraperResult.ProcessedSearches)
 }

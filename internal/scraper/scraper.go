@@ -2,7 +2,6 @@ package scraper
 
 import (
 	"fmt"
-	"log"
 	"log/slog"
 	"time"
 	"vinted-watcher/internal/domain"
@@ -36,6 +35,7 @@ func NewScraper(vintedClient vinted.VintedClient, db storage.SearchStorage, conf
 
 func (s *Scraper) Scrape() (*ScraperResult, error) {
 
+	slog.Info("Scraping...")
 	result := &ScraperResult{
 		NewItems: make([]vinted.Item, 0),
 		Errors:   make([]error, 0),
@@ -49,16 +49,18 @@ func (s *Scraper) Scrape() (*ScraperResult, error) {
 	for _, search := range activeSearches {
 		newItems, err := s.processSearch(search)
 		if err != nil {
-			// Log error but continue processing other searches
-			log.Printf("Error processing search %d: %v", search.ID, err)
+			slog.Error("Error processing search", "search_id", search.ID, "err", err.Error())
 			result.Errors = append(result.Errors, fmt.Errorf("search %d: %w", search.ID, err))
 			continue
 		}
 
 		result.NewItems = append(result.NewItems, newItems...)
 		result.ProcessedSearches++
+
+		slog.Debug("Completed search", "search_id", search.ID, "new_items_count", len(newItems))
 	}
 
+	slog.Info("Scraping complete")
 	return result, nil
 }
 
@@ -88,7 +90,7 @@ func (s *Scraper) processSearch(search domain.SavedSearch) ([]vinted.Item, error
 
 	recentItems := s.filterItemsByLookback(items)
 
-	slog.Info("Recent items after lookback filter:", "count", len(recentItems))
+	slog.Info("Items remaining after lookback filter", "count", len(recentItems))
 
 	newItems := make([]vinted.Item, 0)
 
@@ -102,7 +104,7 @@ func (s *Scraper) processSearch(search domain.SavedSearch) ([]vinted.Item, error
 			newItems = append(newItems, item)
 		}
 
-		slog.Info("Processed item", "item_id", item.ID, "search_id", search.ID)
+		slog.Debug("Processed item", "item_id", item.ID, "search_id", search.ID)
 	}
 
 	return newItems, nil
@@ -154,7 +156,7 @@ func (s *Scraper) filterItemsByLookback(items []vinted.Item) []vinted.Item {
 
 // isItemWithinLookback checks if an item is within the lookback period
 func (s *Scraper) isItemWithinLookback(item vinted.Item, cutoff time.Time) bool {
-	slog.Info("Checking item", "item_id", item.ID, "uploaded_at", item.Photo.HighResolution.Timestamp)
+	slog.Debug("Checking whether item was uploaded within lookback period", "item_id", item.ID, "uploaded_at", item.Photo.HighResolution.Timestamp, "cutoff_time", cutoff)
 	uploadedAt := time.Unix(int64(item.Photo.HighResolution.Timestamp), 0)
 	return uploadedAt.After(cutoff)
 }

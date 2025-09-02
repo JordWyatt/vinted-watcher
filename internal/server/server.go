@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"net/http"
 	"time"
+	"vinted-watcher/internal/scraper"
 	"vinted-watcher/internal/storage"
 )
 
@@ -20,11 +21,13 @@ type Server interface {
 type HTTPServer struct {
 	Storage    *storage.DB
 	httpServer *http.Server
+	Scraper    *scraper.Scraper
 }
 
-func NewServer(storage *storage.DB) *HTTPServer {
+func NewServer(storage *storage.DB, scraper *scraper.Scraper) *HTTPServer {
 	return &HTTPServer{
 		Storage: storage,
+		Scraper: scraper,
 	}
 }
 
@@ -32,6 +35,7 @@ func (s *HTTPServer) Start(ctx context.Context) error {
 	mux := http.NewServeMux()
 	mux.HandleFunc("POST /searches", s.CreateSearchHandler)
 	mux.HandleFunc("GET /searches", s.ListSearchesHandler)
+	mux.HandleFunc("POST /scrape", s.RunScraper)
 
 	s.httpServer = &http.Server{
 		Addr:    ":8080",

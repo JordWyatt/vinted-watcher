@@ -48,7 +48,7 @@ func main() {
 
 	go startScheduler(ctx, vintedScraper, 5*time.Minute)
 
-	httpServer := server.NewServer(db)
+	httpServer := server.NewServer(db, vintedScraper)
 	if err := httpServer.Start(ctx); err != nil {
 		slog.Error("Error starting server:", "error", err)
 	}

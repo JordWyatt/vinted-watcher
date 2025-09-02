@@ -42,11 +42,11 @@ func main() {
 	vintedClient := vinted.NewClient(VINTED_BASE_URL)
 
 	vintedScraper := scraper.NewScraper(vintedClient, db, scraper.ScraperConfig{
-		LookbackPeriod:                24 * time.Hour * 7,
+		LookbackPeriod:                24 * time.Hour,
 		DiscordNotificationWebhookURL: os.Getenv(DISCORD_WEBHOOK_URL_ENV_VAR),
 	})
 
-	go startScheduler(ctx, vintedScraper, 10*time.Second)
+	go startScheduler(ctx, vintedScraper, 1*time.Minute)
 
 	httpServer := server.NewServer(db)
 	if err := httpServer.Start(ctx); err != nil {

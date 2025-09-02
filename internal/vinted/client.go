@@ -186,11 +186,9 @@ func (c *Client) InitSession() error {
 		return fmt.Errorf("failed to create session request: %w", err)
 	}
 
-	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "+
-		"AppleWebKit/537.36 (KHTML, like Gecko) "+
-		"Chrome/126.0.0.0 Safari/537.36")
-	req.Header.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
-	req.Header.Set("Accept-Language", "en-GB,en;q=0.9")
+	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("Referer", vintedAuthURL)
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
@@ -201,7 +199,7 @@ func (c *Client) InitSession() error {
 	u, _ := url.Parse(vintedAuthURL)
 	cookies := c.httpClient.Jar.Cookies(u)
 
-	slog.Debug("Vinted cookies set",
+	slog.Info("Vinted cookies set",
 		"status", resp.Status,
 		"cookies", cookies,
 	)

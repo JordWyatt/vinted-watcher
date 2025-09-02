@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/cookiejar"
+	"net/url"
 	"vinted-watcher/internal/domain"
 )
 
@@ -164,47 +165,83 @@ type UserPhoto struct {
 
 func NewClient(baseURL string) *Client {
 	jar, _ := cookiejar.New(nil)
-	return &Client{
+	client := Client{
 		baseURL: baseURL,
 		httpClient: &http.Client{
 			Jar: jar,
 		},
 	}
+
+	err := client.InitSession()
+	if err != nil {
+		slog.Error("Error initializing Vinted client session, continuing anyway", "error", err)
+	}
+	return &client
 }
 
 // InitSession initializes a session with the Vinted API. Cookies are stored in the client's cookie jar.
 func (c *Client) InitSession() error {
-	req, err := http.NewRequest(http.MethodHead, vintedAuthURL, nil)
+	req, err := http.NewRequest(http.MethodGet, vintedAuthURL, nil)
 	if err != nil {
 		return fmt.Errorf("failed to create session request: %w", err)
 	}
+
+	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "+
+		"AppleWebKit/537.36 (KHTML, like Gecko) "+
+		"Chrome/126.0.0.0 Safari/537.36")
+	req.Header.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
+	req.Header.Set("Accept-Language", "en-GB,en;q=0.9")
+
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
 		return fmt.Errorf("failed to initiate session: %w", err)
 	}
 	defer resp.Body.Close()
+
+	u, _ := url.Parse(vintedAuthURL)
+	cookies := c.httpClient.Jar.Cookies(u)
+
+	slog.Debug("Vinted cookies set",
+		"status", resp.Status,
+		"cookies", cookies,
+	)
+
 	return nil
 }
 
 func (c *Client) GetItems(params *domain.SearchParams) ([]Item, error) {
-	if err := c.InitSession(); err != nil {
-		return nil, err
-	}
-
 	apiURL, err := params.ToApiURL()
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate API URL: %w", err)
 	}
 
-	req, err := http.NewRequest(http.MethodGet, apiURL, nil)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create API request: %w", err)
+	// Helper: perform one request
+	doRequest := func() (*http.Response, error) {
+		req, err := http.NewRequest(http.MethodGet, apiURL, nil)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create API request: %w", err)
+		}
+		slog.Info("Making Vinted API request", "vinted_api_url", req.URL.String())
+		return c.httpClient.Do(req)
 	}
 
-	slog.Info("Making Vinted API request", "vinted_api_url", req.URL.String())
-	resp, err := c.httpClient.Do(req)
+	resp, err := doRequest()
 	if err != nil {
-		return nil, fmt.Errorf("failed to make API request: %w", err)
+		return nil, err
+	}
+
+	if resp.StatusCode == http.StatusUnauthorized {
+		slog.Warn("Got 401, re-initializing Vinted session")
+		resp.Body.Close()
+
+		if err := c.InitSession(); err != nil {
+			return nil, fmt.Errorf("failed to re-init session: %w", err)
+		}
+
+		resp, err = doRequest()
+		if err != nil {
+			return nil, err
+		}
 	}
 	defer resp.Body.Close()
 

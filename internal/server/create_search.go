@@ -2,6 +2,7 @@ package server
 
 import (
 	"encoding/json"
+	"log/slog"
 	"net/http"
 	"vinted-watcher/internal/domain"
 	"vinted-watcher/internal/vinted"
@@ -17,6 +18,7 @@ type CreateAlertResponse struct {
 
 // TODO: Unit Test
 func (s *HTTPServer) CreateSearchHandler(w http.ResponseWriter, r *http.Request) {
+	slog.Info("Creating new search")
 	var req CreateAlertRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -45,6 +47,8 @@ func (s *HTTPServer) CreateSearchHandler(w http.ResponseWriter, r *http.Request)
 	resp := CreateAlertResponse{
 		ID: searchID,
 	}
+
+	slog.Info("Successfully created new search", slog.Int("id", searchID))
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(resp)

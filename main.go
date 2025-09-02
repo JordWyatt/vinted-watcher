@@ -15,6 +15,8 @@ import (
 )
 
 const DISCORD_WEBHOOK_URL_ENV_VAR = "DISCORD_WEBHOOK_URL"
+const DB_PATH_ENV_VAR = "DB_PATH"
+const DEFAULT_DB_PATH = "./vinted.db"
 const VINTED_BASE_URL = "http://www.vinted.com"
 
 // Test code - will eventually become server entrypoint
@@ -31,7 +33,7 @@ func main() {
 		cancel()
 	}()
 
-	db, err := storage.NewDB("vinted.db")
+	db, err := storage.NewDB(getEnvVar(DB_PATH_ENV_VAR, DEFAULT_DB_PATH))
 	if err != nil {
 		slog.Error("Error initializing database", "error", err)
 		return
@@ -79,4 +81,12 @@ func safeScrape(scraper *scraper.Scraper) {
 		return
 	}
 	slog.Debug("Scrape stats", "new_item_count", len(scraperResult.NewItems), "processed_searches_count", scraperResult.ProcessedSearches)
+}
+
+func getEnvVar(varName string, defaultValue string) string {
+	value := os.Getenv(varName)
+	if value == "" {
+		return defaultValue
+	}
+	return value
 }

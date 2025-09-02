@@ -4,7 +4,7 @@ import (
 	"net/http"
 )
 
-func (s *HTTPServer) RunScraper(r *http.Request, w http.ResponseWriter) {
+func (s *HTTPServer) RunScraperHandler(w http.ResponseWriter, r *http.Request) {
 	_, err := s.Scraper.Scrape()
 	if err != nil {
 		http.Error(w, "Failed to run scraper", http.StatusInternalServerError)

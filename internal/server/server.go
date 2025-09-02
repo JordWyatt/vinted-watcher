@@ -35,7 +35,7 @@ func (s *HTTPServer) Start(ctx context.Context) error {
 	mux := http.NewServeMux()
 	mux.HandleFunc("POST /searches", s.CreateSearchHandler)
 	mux.HandleFunc("GET /searches", s.ListSearchesHandler)
-	mux.HandleFunc("POST /scrape", s.RunScraper)
+	mux.HandleFunc("POST /scrape", s.RunScraperHandler)
 
 	s.httpServer = &http.Server{
 		Addr:    ":8080",

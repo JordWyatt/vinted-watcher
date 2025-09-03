@@ -46,7 +46,7 @@ func main() {
 		DiscordNotificationWebhookURL: os.Getenv(DISCORD_WEBHOOK_URL_ENV_VAR),
 	})
 
-	go startScheduler(ctx, vintedScraper, 5*time.Minute)
+	go startScheduler(ctx, vintedScraper, 1*time.Hour)
 
 	httpServer := server.NewServer(db, vintedScraper)
 	if err := httpServer.Start(ctx); err != nil {

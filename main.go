@@ -17,7 +17,7 @@ import (
 const DISCORD_WEBHOOK_URL_ENV_VAR = "DISCORD_WEBHOOK_URL"
 const DB_PATH_ENV_VAR = "DB_PATH"
 const DEFAULT_DB_PATH = "./vinted.db"
-const VINTED_BASE_URL = "http://www.vinted.com"
+const VINTED_BASE_URL = "http://www.vinted.co.uk"
 
 // Test code - will eventually become server entrypoint
 func main() {

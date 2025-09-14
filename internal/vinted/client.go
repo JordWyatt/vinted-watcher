@@ -13,7 +13,6 @@ import (
 )
 
 const PROXIES_ENV_VAR = "PROXY_URLS"
-const vintedAuthURL = "https://www.vinted.co.uk"
 
 type VintedClient interface {
 	GetItems(params *domain.SearchParams) ([]Item, error)

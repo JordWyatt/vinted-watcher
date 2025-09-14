@@ -58,6 +58,7 @@ func startScheduler(ctx context.Context, scraper *scraper.Scraper, interval time
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
 
+	safeScrape(scraper) // Initial scrape on startup
 	for {
 		select {
 		case <-ticker.C:

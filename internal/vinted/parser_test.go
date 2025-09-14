@@ -30,14 +30,22 @@ func Test_Parse_WithFullVintedURL(t *testing.T) {
 }
 
 func Test_Parse_MinimalURL(t *testing.T) {
-	url := "https://www.vinted.co.uk/catalog?search_text=universal%20works&time=1754855320"
+	url := "https://www.vinted.co.uk/catalog?search_text=universal%20works&time=1754855320&brand_ids[]=123"
 
 	expected := &domain.SearchParams{
 		SearchText: "universal works",
+		BrandIDs:   []int{123},
 	}
 
 	actual, err := ParseVintedURL(url)
 	require.NoError(t, err, "should not return an error for a valid URL")
 
 	require.Equal(t, expected, actual, "parsed parameters should match expected values")
+}
+
+func Test_Parse_FailsIfBrandIDsIsMissing(t *testing.T) {
+	url := "https://www.vinted.co.uk/catalog?search_text=universal%20works&time=1754855320"
+
+	_, err := ParseVintedURL(url)
+	require.Error(t, err, "should return an error for invalid brand_ids")
 }

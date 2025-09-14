@@ -33,44 +33,35 @@ func NewClient(baseURL string) *Client {
 		httpClient: &http.Client{
 			Jar: jar,
 		},
+		proxies: getProxies(),
 	}
 
-	client.proxies = getProxies()
 	if len(client.proxies) > 0 {
 		slog.Info("Using proxies", "proxies", client.proxies)
 	} else {
 		slog.Info("No proxies configured")
 	}
 
-	err := client.InitSession()
+	err := client.ResetSession()
 	if err != nil {
 		slog.Error("Error initializing Vinted client session, continuing anyway", "error", err)
 	}
 	return &client
 }
 
-// InitSession initializes a session with the Vinted API. Cookies are stored in the client's cookie jar.
-func (c *Client) InitSession() error {
-	c.httpClient.Jar, _ = cookiejar.New(nil)
-	req, err := http.NewRequest(http.MethodGet, vintedAuthURL, nil)
-	if err != nil {
-		return fmt.Errorf("failed to create session request: %w", err)
-	}
+// ResetSession discards cookies and re-initiates a session.
+func (c *Client) ResetSession() error {
+	jar, _ := cookiejar.New(nil)
+	c.httpClient.Jar = jar
 
+	req, _ := http.NewRequest(http.MethodGet, c.baseURL, nil)
 	resp, err := c.Do(req)
 	if err != nil {
-		return fmt.Errorf("failed to initiate session: %w", err)
+		return fmt.Errorf("reset session failed: %w", err)
 	}
 	defer resp.Body.Close()
 
-	u, _ := url.Parse(vintedAuthURL)
-	cookies := c.httpClient.Jar.Cookies(u)
-
-	slog.Info("Vinted cookies set",
-		"status", resp.Status,
-		"cookies", cookies,
-	)
-
+	slog.Info("Session reset", "status", resp.Status)
 	return nil
 }
 
@@ -80,35 +71,31 @@ func (c *Client) GetItems(params *domain.SearchParams) ([]Item, error) {
 		return nil, fmt.Errorf("failed to generate API URL: %w", err)
 	}
 
-	// Helper: perform one request
-	doRequest := func() (*http.Response, error) {
-		req, err := http.NewRequest(http.MethodGet, apiURL, nil)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create API request: %w", err)
-		}
-		slog.Info("Making Vinted API request", "vinted_api_url", req.URL.String())
-		return c.Do(req)
+	req, err := http.NewRequest(http.MethodGet, apiURL, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create API request: %w", err)
 	}
+	slog.Info("Making Vinted API request", "vinted_api_url", req.URL.String())
 
-	resp, err := doRequest()
+	resp, err := c.Do(req)
 	if err != nil {
 		return nil, err
 	}
+	defer resp.Body.Close()
 
 	if resp.StatusCode == http.StatusUnauthorized {
 		slog.Warn("Got 401, re-initializing Vinted session")
 		resp.Body.Close()
 
-		if err := c.InitSession(); err != nil {
+		if err := c.ResetSession(); err != nil {
 			return nil, fmt.Errorf("failed to re-init session: %w", err)
 		}
 
-		resp, err = doRequest()
+		resp, err = c.Do(req)
 		if err != nil {
 			return nil, err
 		}
 	}
-	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("API request failed with status: %s", resp.Status)
@@ -136,9 +123,10 @@ func (c *Client) Do(req *http.Request) (*http.Response, error) {
 	slog.Info("Using proxy", "proxy", proxy.String())
 
 	// Update the existing httpClient transport to use the proxy
-	c.httpClient.Transport = &http.Transport{
+	transport := &http.Transport{
 		Proxy: http.ProxyURL(proxy),
 	}
+	c.httpClient.Transport = transport
 
 	return c.httpClient.Do(req)
 }

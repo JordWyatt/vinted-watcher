@@ -56,10 +56,6 @@ func (c *Client) InitSession() error {
 		return fmt.Errorf("failed to create session request: %w", err)
 	}
 
-	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
-	req.Header.Set("Accept", "application/json")
-	req.Header.Set("Referer", vintedAuthURL)
-
 	resp, err := c.Do(req)
 	if err != nil {
 		return fmt.Errorf("failed to initiate session: %w", err)
@@ -126,6 +122,8 @@ func (c *Client) GetItems(params *domain.SearchParams) ([]Item, error) {
 }
 
 func (c *Client) Do(req *http.Request) (*http.Response, error) {
+	setDefaultHeaders(req)
+
 	// No proxies configured
 	if len(c.proxies) == 0 {
 		return c.httpClient.Do(req)
@@ -164,4 +162,11 @@ func getProxies() []url.URL {
 	}
 
 	return validProxies
+}
+
+func setDefaultHeaders(req *http.Request) {
+	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
+	req.Header.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
+	req.Header.Set("Accept-Language", "en-US,en;q=0.9")
+	req.Header.Set("Referer", vintedAuthURL)
 }

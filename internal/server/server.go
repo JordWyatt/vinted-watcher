@@ -33,9 +33,9 @@ func NewServer(storage *storage.DB, scraper *scraper.Scraper) *HTTPServer {
 
 func (s *HTTPServer) Start(ctx context.Context) error {
 	mux := http.NewServeMux()
-	mux.HandleFunc("POST /searches", s.CreateSearchHandler)
-	mux.HandleFunc("GET /searches", s.ListSearchesHandler)
-	mux.HandleFunc("POST /scrape", s.RunScraperHandler)
+	mux.Handle("POST /searches", authMiddleware(http.HandlerFunc(s.CreateSearchHandler)))
+	mux.Handle("GET /searches", authMiddleware(http.HandlerFunc(s.ListSearchesHandler)))
+	mux.Handle("POST /scrape", authMiddleware(http.HandlerFunc(s.RunScraperHandler)))
 
 	s.httpServer = &http.Server{
 		Addr:    ":8080",

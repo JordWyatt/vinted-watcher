@@ -51,6 +51,7 @@ func NewClient(baseURL string) *Client {
 
 // InitSession initializes a session with the Vinted API. Cookies are stored in the client's cookie jar.
 func (c *Client) InitSession() error {
+	c.httpClient.Jar, _ = cookiejar.New(nil)
 	req, err := http.NewRequest(http.MethodGet, vintedAuthURL, nil)
 	if err != nil {
 		return fmt.Errorf("failed to create session request: %w", err)

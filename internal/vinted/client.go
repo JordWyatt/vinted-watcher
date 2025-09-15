@@ -13,6 +13,7 @@ import (
 )
 
 const PROXIES_ENV_VAR = "PROXY_URLS"
+const REFRESH_SESSION_ENDPOINT = "/session-refresh"
 
 type VintedClient interface {
 	GetItems(params *domain.SearchParams) ([]Item, error)
@@ -41,26 +42,39 @@ func NewClient(baseURL string) *Client {
 		slog.Info("No proxies configured")
 	}
 
-	err := client.ResetSession()
+	err := client.InitSession()
 	if err != nil {
 		slog.Error("Error initializing Vinted client session, continuing anyway", "error", err)
 	}
 	return &client
 }
 
-// ResetSession discards cookies and re-initiates a session.
-func (c *Client) ResetSession() error {
+// InitSession discards cookies and re-initiates a session.
+func (c *Client) InitSession() error {
 	jar, _ := cookiejar.New(nil)
 	c.httpClient.Jar = jar
 
 	req, _ := http.NewRequest(http.MethodGet, c.baseURL, nil)
 	resp, err := c.Do(req)
 	if err != nil {
-		return fmt.Errorf("reset session failed: %w", err)
+		return fmt.Errorf("init session failed: %w", err)
 	}
 	defer resp.Body.Close()
 
-	slog.Info("Session reset", "status", resp.Status)
+	slog.Info("Session initialised", "status", resp.Status)
+	return nil
+}
+
+func (c *Client) RefreshSession() error {
+	slog.Info("Refreshing Vinted session...")
+	req, _ := http.NewRequest(http.MethodGet, fmt.Sprintf("%s%s", c.baseURL, REFRESH_SESSION_ENDPOINT), nil)
+	resp, err := c.Do(req)
+	if err != nil {
+		return fmt.Errorf("refresh session failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	slog.Info("Session refreshed", "status", resp.Status)
 	return nil
 }
 
@@ -86,7 +100,7 @@ func (c *Client) GetItems(params *domain.SearchParams) ([]Item, error) {
 		slog.Warn("Got 401, re-initializing Vinted session")
 		resp.Body.Close()
 
-		if err := c.ResetSession(); err != nil {
+		if err := c.RefreshSession(); err != nil {
 			return nil, fmt.Errorf("failed to re-init session: %w", err)
 		}
 

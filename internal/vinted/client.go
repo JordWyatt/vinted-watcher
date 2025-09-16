@@ -65,18 +65,18 @@ func (c *Client) InitSession() error {
 	return nil
 }
 
-func (c *Client) RefreshSession() error {
-	slog.Info("Refreshing Vinted session...")
-	req, _ := http.NewRequest(http.MethodGet, fmt.Sprintf("%s%s", c.baseURL, REFRESH_SESSION_ENDPOINT), nil)
-	resp, err := c.Do(req)
-	if err != nil {
-		return fmt.Errorf("refresh session failed: %w", err)
-	}
-	defer resp.Body.Close()
-
-	slog.Info("Session refreshed", "status", resp.Status)
-	return nil
-}
+//func (c *Client) RefreshSession() error {
+//	slog.Info("Refreshing Vinted session...")
+//	req, _ := http.NewRequest(http.MethodGet, fmt.Sprintf("%s%s", c.baseURL, REFRESH_SESSION_ENDPOINT), nil)
+//	resp, err := c.Do(req)
+//	if err != nil {
+//		return fmt.Errorf("refresh session failed: %w", err)
+//	}
+//	defer resp.Body.Close()
+//
+//	slog.Info("Session refreshed", "status", resp.Status)
+//	return nil
+//}
 
 func (c *Client) GetItems(params *domain.SearchParams) ([]Item, error) {
 	apiURL, err := params.ToApiURL()
@@ -100,7 +100,7 @@ func (c *Client) GetItems(params *domain.SearchParams) ([]Item, error) {
 		slog.Warn("Got 401, re-initializing Vinted session")
 		resp.Body.Close()
 
-		if err := c.RefreshSession(); err != nil {
+		if err := c.InitSession(); err != nil {
 			return nil, fmt.Errorf("failed to re-init session: %w", err)
 		}
 
